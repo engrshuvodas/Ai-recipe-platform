@@ -20,14 +20,14 @@ timeout /t 1 /nobreak >nul
 
 :: Start Backend Server (port 5000)
 echo [1/3] Starting Backend API Server on port 5000...
-start "Recipe Companion - Backend API" cmd /k "cd /d e:\ProjectRecipe\server && node server.js"
+start "Recipe Companion - Backend API" cmd /k "cd /d "%~dp0server" && node server.js"
 
 :: Wait for backend to initialize
 timeout /t 4 /nobreak >nul
 
 :: Start Frontend Dev Server (port 5173)
 echo [2/3] Starting Frontend Dev Server on port 5173...
-start "Recipe Companion - Frontend" cmd /k "cd /d e:\ProjectRecipe\client && npm.cmd run dev -- --host --port 5173"
+start "Recipe Companion - Frontend" cmd /k "cd /d "%~dp0client" && npm.cmd run dev -- --host --port 5173"
 
 :: Wait for frontend to boot
 timeout /t 6 /nobreak >nul

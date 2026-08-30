@@ -4,46 +4,79 @@ const Recipe = require('../models/Recipe');
 const { protect, optionalAuth } = require('../middleware/auth');
 
 // ─── OpenRouter API Helper ────────────────────────────────────────────────────
-const callOpenRouter = async (messages, temperature = 0.8, maxTokens = 2000) => {
-  const useLocal = process.env.USE_LOCAL_LLM === 'true';
+const callLLM = async (messages, temperature = 0.8, maxTokens = 2000) => {
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  const openRouterModel = process.env.OPENROUTER_MODEL || 'openai/gpt-4o';
+  
+  const localKey = process.env.LOCAL_API_KEY || 'ollama';
+  const localModel = process.env.LOCAL_MODEL || 'qwen2.5:1.5b';
+  const localBase = process.env.LOCAL_LLM_BASE || 'http://localhost:11434/v1';
 
-  const apiKey = useLocal ? (process.env.LOCAL_API_KEY || 'ollama') : process.env.OPENROUTER_API_KEY;
-  const model = useLocal ? (process.env.LOCAL_MODEL || 'qwen2.5:1.5b') : (process.env.OPENROUTER_MODEL || 'openai/gpt-4o');
-  const baseUrl = useLocal ? (process.env.LOCAL_LLM_BASE || 'http://localhost:11434/v1') : 'https://openrouter.ai/api/v1';
+  let lastError = null;
 
-  if (!useLocal && !apiKey) throw new Error('OPENROUTER_API_KEY not configured');
+  // 1st Priority: OpenRouter
+  if (openRouterKey && openRouterKey.length > 10 && !openRouterKey.includes('your-key-here')) {
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openRouterKey}`,
+          'HTTP-Referer': 'http://localhost:5000',
+          'X-Title': 'Recipe Companion AI Chef',
+        },
+        body: JSON.stringify({
+          model: openRouterModel,
+          messages,
+          temperature,
+          max_tokens: maxTokens,
+        }),
+      });
 
-  const headers = {
-    'Content-Type': 'application/json',
-  };
-
-  if (apiKey) {
-    headers['Authorization'] = `Bearer ${apiKey}`;
+      if (response.ok) {
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) return { content, model: openRouterModel, provider: 'OpenRouter' };
+      } else {
+        const errBody = await response.text();
+        throw new Error(`OpenRouter API error ${response.status}: ${errBody}`);
+      }
+    } catch (err) {
+      console.warn(`[AI] OpenRouter failed: ${err.message}. Trying local AI fallback...`);
+      lastError = err;
+    }
   }
 
-  if (!useLocal) {
-    headers['HTTP-Referer'] = 'http://localhost:5000';
-    headers['X-Title'] = 'Recipe Companion AI Chef';
+  // 2nd Priority: Local AI (Ollama)
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (localKey) headers['Authorization'] = `Bearer ${localKey}`;
+
+    const response = await fetch(`${localBase}/chat/completions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: localModel,
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (content) return { content, model: localModel, provider: 'Local AI' };
+    } else {
+      const errBody = await response.text();
+      throw new Error(`Local AI error ${response.status}: ${errBody}`);
+    }
+  } catch (err) {
+    console.error(`[AI] Local AI failed: ${err.message}`);
+    lastError = err;
   }
 
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-    }),
-  });
-
-  if (!response.ok) {
-    const errBody = await response.text();
-    throw new Error(`AI API error ${response.status}: ${errBody}`);
-  }
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
+  throw new Error(lastError ? lastError.message : 'No AI providers configured or available.');
 };
 
 // ─── Offline Fallback (used only if AI API fails) ────────────────────────────
@@ -169,22 +202,22 @@ Respond ONLY with this exact JSON structure (no markdown, no extra text):
   "chefTip": "A professional tip to make this dish restaurant-quality"
 }`;
 
-      const rawText = await callOpenRouter([
+      const result = await callLLM([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ]);
 
       // Strip any accidental markdown code blocks
-      const cleaned = rawText.replace(/```json/gi, '').replace(/```/gi, '').trim();
+      const cleaned = result.content.replace(/```json/gi, '').replace(/```/gi, '').trim();
       generatedRecipe = JSON.parse(cleaned);
       generatedRecipe.isAIGenerated = true;
-      generatedRecipe.aiModel = process.env.OPENROUTER_MODEL || 'openai/gpt-4o';
+      generatedRecipe.aiModel = result.model;
       generatedRecipe.images = [
         'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80',
       ];
-      console.log('[AI] Recipe generated via OpenRouter GPT-4o:', generatedRecipe.title);
+      console.log(`[AI] Recipe generated via ${result.provider} (${result.model}):`, generatedRecipe.title);
     } catch (aiErr) {
-      console.error('[AI] OpenRouter failed — falling back to local engine:', aiErr.message);
+      console.error('[AI] AI generation failed — falling back to offline engine:', aiErr.message);
     }
 
     // ── Fallback to local offline engine ──
@@ -232,10 +265,11 @@ Always give practical, friendly, concise answers (2-4 sentences max). Use emojis
         },
       ];
 
-      answer = await callOpenRouter(messages, 0.7, 400);
-      console.log('[AI] Chef chat answered via OpenRouter GPT-4o');
+      const result = await callLLM(messages, 0.7, 400);
+      answer = result.content;
+      console.log(`[AI] Chef chat answered via ${result.provider}`);
     } catch (aiErr) {
-      console.error('[AI] Chef chat OpenRouter failed — using local fallback:', aiErr.message);
+      console.error('[AI] Chef chat failed — using local fallback:', aiErr.message);
 
       // Local keyword-based fallback
       const q = question.toLowerCase();
@@ -273,7 +307,7 @@ router.post('/meal-suggestions', optionalAuth, async (req, res, next) => {
     let suggestions = [];
 
     try {
-      const rawText = await callOpenRouter([
+      const result = await callLLM([
         {
           role: 'system',
           content: 'You are a professional nutritionist and chef. Respond ONLY with valid JSON. No markdown.',
@@ -290,9 +324,9 @@ Respond ONLY with this JSON array:
         },
       ], 0.7, 800);
 
-      const cleaned = rawText.replace(/```json/gi, '').replace(/```/gi, '').trim();
+      const cleaned = result.content.replace(/```json/gi, '').replace(/```/gi, '').trim();
       suggestions = JSON.parse(cleaned);
-      console.log('[AI] Meal suggestions generated via OpenRouter');
+      console.log(`[AI] Meal suggestions generated via ${result.provider}`);
     } catch (aiErr) {
       console.error('[AI] Meal suggestions fallback:', aiErr.message);
       suggestions = [
