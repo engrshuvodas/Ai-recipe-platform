@@ -1,0 +1,56 @@
+# ─── Environment Variables (MOST IMPORTANT - Never push these!) ──────────────
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+*.env
+
+# ─── Node Modules (Very large, not needed on GitHub) ─────────────────────────
+node_modules/
+**/node_modules/
+
+# ─── Build Output ─────────────────────────────────────────────────────────────
+dist/
+build/
+.next/
+out/
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ─── OS Files ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Editor / IDE ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# ─── Uploads (User uploaded files) ───────────────────────────────────────────
+server/uploads/
+public/uploads/
+
+# ─── Cache ────────────────────────────────────────────────────────────────────
+.cache/
+.parcel-cache/
+.vite/
+**/.vite/
+
+# ─── Misc ─────────────────────────────────────────────────────────────────────
+*.pem
+*.key
+*.cert
+*.p12
+coverage/
+.nyc_output/

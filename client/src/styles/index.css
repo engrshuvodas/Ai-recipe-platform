@@ -1,0 +1,146 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS Custom Properties ──────────────────────────────────────────────── */
+@layer base {
+  :root {
+    --color-primary:       #0e3b2e;
+    --color-primary-light: #1f6d54;
+    --color-accent-gold:   #d4af37;
+    --color-bg-cream:      #faf7f2;
+    --color-bg-card:       #ffffff;
+    --color-border:        #e8dfd1;
+  }
+
+  .dark {
+    --color-primary:       #124334;
+    --color-primary-light: #2d8a6b;
+    --color-accent-gold:   #e2be52;
+    --color-bg-cream:      #071712;
+    --color-bg-card:       #0e271f;
+    --color-border:        #1a4234;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: var(--color-bg-cream);
+    color: #1e2621;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .dark body {
+    color: #f3f4f6;
+  }
+
+  h1, h2, h3, h4,
+  .font-serif {
+    font-family: 'Playfair Display', serif;
+  }
+
+  a {
+    transition: color 0.2s ease;
+  }
+}
+
+/* ─── Glassmorphism ───────────────────────────────────────────────────────── */
+@layer components {
+  .glass-nav {
+    background: rgba(250, 247, 242, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.20);
+  }
+
+  .dark .glass-nav {
+    background: rgba(7, 23, 18, 0.90);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+  }
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(232, 223, 209, 0.7);
+  }
+
+  .dark .glass-card {
+    background: rgba(14, 39, 31, 0.80);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(31, 109, 84, 0.35);
+  }
+
+  .glass-modal {
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .dark .glass-modal {
+    background: rgba(10, 28, 22, 0.97);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+}
+
+/* ─── Text Gradients ─────────────────────────────────────────────────────── */
+@layer utilities {
+  .text-gold-gradient {
+    background: linear-gradient(135deg, #d4af37 0%, #f3e5b3 50%, #b89028 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-emerald-gradient {
+    background: linear-gradient(135deg, #0e3b2e 0%, #1f6d54 50%, #2d8a6b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .dark .text-emerald-gradient {
+    background: linear-gradient(135deg, #83c2ad 0%, #b2dbcb 50%, #f2e5b3 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+/* ─── Interactive Card Hover ─────────────────────────────────────────────── */
+.recipe-card-hover {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.recipe-card-hover:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 32px -4px rgba(14, 59, 46, 0.15);
+}
+
+.dark .recipe-card-hover:hover {
+  box-shadow: 0 16px 32px -4px rgba(0, 0, 0, 0.5),
+              0 0 20px rgba(31, 109, 84, 0.3);
+}
+
+/* ─── Custom Scrollbar ───────────────────────────────────────────────────── */
+::-webkit-scrollbar            { width: 6px; height: 6px; }
+::-webkit-scrollbar-track      { background: rgba(232, 223, 209, 0.3); }
+::-webkit-scrollbar-thumb      { background: #c59b27; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover{ background: #a37f1e; }
+
+.dark ::-webkit-scrollbar-track { background: rgba(14, 59, 46, 0.3); }
