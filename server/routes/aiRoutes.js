@@ -5,19 +5,30 @@ const { protect, optionalAuth } = require('../middleware/auth');
 
 // ─── OpenRouter API Helper ────────────────────────────────────────────────────
 const callOpenRouter = async (messages, temperature = 0.8, maxTokens = 2000) => {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o';
+  const useLocal = process.env.USE_LOCAL_LLM === 'true';
 
-  if (!apiKey) throw new Error('OPENROUTER_API_KEY not configured');
+  const apiKey = useLocal ? (process.env.LOCAL_API_KEY || 'ollama') : process.env.OPENROUTER_API_KEY;
+  const model = useLocal ? (process.env.LOCAL_MODEL || 'qwen2.5:1.5b') : (process.env.OPENROUTER_MODEL || 'openai/gpt-4o');
+  const baseUrl = useLocal ? (process.env.LOCAL_LLM_BASE || 'http://localhost:11434/v1') : 'https://openrouter.ai/api/v1';
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  if (!useLocal && !apiKey) throw new Error('OPENROUTER_API_KEY not configured');
+
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+
+  if (apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  }
+
+  if (!useLocal) {
+    headers['HTTP-Referer'] = 'http://localhost:5000';
+    headers['X-Title'] = 'Recipe Companion AI Chef';
+  }
+
+  const response = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'http://localhost:5000',
-      'X-Title': 'Recipe Companion AI Chef',
-    },
+    headers,
     body: JSON.stringify({
       model,
       messages,
@@ -28,7 +39,7 @@ const callOpenRouter = async (messages, temperature = 0.8, maxTokens = 2000) => 
 
   if (!response.ok) {
     const errBody = await response.text();
-    throw new Error(`OpenRouter API error ${response.status}: ${errBody}`);
+    throw new Error(`AI API error ${response.status}: ${errBody}`);
   }
 
   const data = await response.json();
